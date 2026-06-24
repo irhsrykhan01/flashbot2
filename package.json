@@ -1,12 +1,5 @@
 {
   "name": "flashbot",
-  "version": "1.0.0",
-  "private": true,
-  "scripts": {
-    "dev": "vercel dev",
-    "build": "echo 'Static site, no build needed'"
-  },
-  "devDependencies": {
-    "vercel": "latest"
-  }
+  "version": "3.0.0",
+  "private": true
 }
