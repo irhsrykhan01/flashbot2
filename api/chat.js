@@ -6,13 +6,13 @@ export async function POST(req) {
 
     const groqKey = process.env.GROQ_API_KEY;
     if (!groqKey) {
-      return new Response(JSON.stringify({ error: "GROQ_API_KEY not set in environment variables" }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "GROQ_API_KEY not configured. Add it in Vercel → Settings → Environment Variables." }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
     }
 
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -23,35 +23,37 @@ export async function POST(req) {
         messages: [
           {
             role: "system",
-            content:
-              systemPrompt ||
-              "You are FLASHBOT, a helpful and intelligent AI assistant. Be concise, clear, and friendly. Reply in the same language the user uses.",
+            content: systemPrompt || "You are FLASHBOT, a helpful AI assistant. Reply in the same language the user uses.",
           },
           ...messages,
         ],
-        max_tokens: 1024,
+        max_tokens: 2048,
         temperature: 0.7,
-        stream: false,
+        stream: true,
       }),
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      return new Response(JSON.stringify({ error: data.error?.message || "Groq API error" }), {
-        status: response.status,
-        headers: { "Content-Type": "application/json" },
-      });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: { message: "Groq API error" } }));
+      return new Response(
+        JSON.stringify({ error: err.error?.message || "Groq API error" }),
+        { status: res.status, headers: { "Content-Type": "application/json" } }
+      );
     }
 
-    return new Response(JSON.stringify({ reply: data.choices[0].message.content }), {
+    // Stream the response directly to the client
+    return new Response(res.body, {
       status: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",
+      },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: err.message }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
   }
 }
